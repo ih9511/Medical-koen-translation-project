@@ -21,6 +21,18 @@ load_dotenv()
 TRAINING_DIR = os.getenv("TRAINING_DIR")
 VALIDATION_DIR = os.getenv("VALIDATION_DIR")
 
+def remove_quotes(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    지정된 컬럼의 문자열에서 양쪽 끝의 큰따옴표를 제거합니다.
+    
+    :parameter df: 처리할 DataFrame
+    :parameter column: 큰따옴표 제거를 적용할 컬럼 이름
+    :return: 큰따옴표가 제거된 DataFrame
+    """
+    df.replace({'"': ''})
+    
+    return df
+
 def preprocess_AIHub_data(csv_file_name: str, load_train=True) -> pd.DataFrame:
     """
     AIHub 데이터를 로드하고 전처리합니다.
@@ -39,13 +51,14 @@ def preprocess_AIHub_data(csv_file_name: str, load_train=True) -> pd.DataFrame:
     df = df[df['domain'].str.contains('의학')]
     df = df.loc[:, ['en', 'ko']]
     df.rename(columns={'en': 'input', 'ko': 'output'}, inplace=True)
-    
+    df = remove_quotes(df=df)
     
     if not load_train:
         validation_output_path = os.path.join(VALIDATION_DIR, 'validation.csv')
         df.to_csv(validation_output_path)
         logging.warning("AIHub test data preprocess done")
         return None
+    
     logging.warning("AIHub train data preprocess done")
     
     return df
@@ -61,6 +74,7 @@ def preprocess_HuggingFace_data(huggingface_path: str) -> pd.DataFrame:
     df = pd.read_parquet(huggingface_path)
     df = df.loc[:, ['kor', 'eng']]
     df.rename(columns={'eng': 'input', 'kor':'output'}, inplace=True)
+    df = remove_quotes(df=df)
     logging.warning(f"HuggingFace data preprocess done")
     
     return df
@@ -73,7 +87,7 @@ def concat_data(df1: pd.DataFrame, df2: pd.DataFrame, csv_file_name: str) -> Non
     :parameter df2: 합치고자 하는 데이터프레임
     :parameter csv_file_name: 합쳐진 데이터프레임을 저장할 이름
     """
-    csv_file_dir = os.join.path(TRAINING_DIR, csv_file_name)
+    csv_file_dir = os.path.join(TRAINING_DIR, csv_file_name)
     
     df = pd.concat([df1, df2], ignore_index=True)
     df.to_csv(csv_file_dir)
