@@ -39,11 +39,13 @@ def preprocess_AIHub_data(csv_file_name: str, load_train=True) -> pd.DataFrame:
     df = df[df['domain'].str.contains('의학')]
     df = df.loc[:, ['en', 'ko']]
     df.rename(columns={'en': 'input', 'ko': 'output'}, inplace=True)
-    logging.info("AIHub data preprocess done")
+    
     
     if not load_train:
         df.to_csv(VALIDATION_DIR + 'validation.csv')
+        logging.warning("AIHub test data preprocess done")
         return None
+    logging.warning("AIHub train data preprocess done")
     
     return df
 
@@ -58,7 +60,7 @@ def preprocess_HuggingFace_data(huggingface_path: str) -> pd.DataFrame:
     df = pd.read_parquet(huggingface_path)
     df = df.loc[:, ['kor', 'eng']]
     df.rename(columns={'eng': 'input', 'kor':'output'}, inplace=True)
-    logging.info(f"HuggingFace data preprocess done")
+    logging.warning(f"HuggingFace data preprocess done")
     
     return df
 
@@ -74,7 +76,7 @@ def concat_data(df1: pd.DataFrame, df2: pd.DataFrame, csv_file_name: str) -> Non
     
     df = pd.concat([df1, df2], ignore_index=True)
     df.to_csv(csv_file_dir)
-    logging.info(f"Concatenated dataframe has been saved in {csv_file_dir}")
+    logging.warning(f"Concatenated dataframe has been saved in {csv_file_dir}")
 
 # TODO
 def load_data(csv_file_path: str, text_columns: List[str]) -> List[str]:
