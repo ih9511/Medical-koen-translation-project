@@ -31,9 +31,9 @@ def preprocess_AIHub_data(csv_file_name: str, load_train=True) -> pd.DataFrame:
     :return: 전처리된 DataFrame
     """
     if load_train:
-        csv_file_dir = TRAINING_DIR + csv_file_name
+        csv_file_dir = os.path.join(TRAINING_DIR, csv_file_name)
     else:
-        csv_file_dir = VALIDATION_DIR + csv_file_name
+        csv_file_dir = os.path.join(VALIDATION_DIR, csv_file_name)
         
     df = pd.read_csv(csv_file_dir)
     df = df[df['domain'].str.contains('의학')]
@@ -42,7 +42,8 @@ def preprocess_AIHub_data(csv_file_name: str, load_train=True) -> pd.DataFrame:
     
     
     if not load_train:
-        df.to_csv(VALIDATION_DIR + 'validation.csv')
+        validation_output_path = os.path.join(VALIDATION_DIR, 'validation.csv')
+        df.to_csv(validation_output_path)
         logging.warning("AIHub test data preprocess done")
         return None
     logging.warning("AIHub train data preprocess done")
@@ -72,7 +73,7 @@ def concat_data(df1: pd.DataFrame, df2: pd.DataFrame, csv_file_name: str) -> Non
     :parameter df2: 합치고자 하는 데이터프레임
     :parameter csv_file_name: 합쳐진 데이터프레임을 저장할 이름
     """
-    csv_file_dir = TRAINING_DIR + csv_file_name
+    csv_file_dir = os.join.path(TRAINING_DIR, csv_file_name)
     
     df = pd.concat([df1, df2], ignore_index=True)
     df.to_csv(csv_file_dir)
