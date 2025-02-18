@@ -54,11 +54,11 @@ def preprocess_AIHub_data(csv_file_name: str, load_train=True) -> pd.DataFrame:
     df = df[df['domain'].str.contains('의학')]
     df = df.loc[:, ['en', 'ko']]
     df.rename(columns={'en': 'input', 'ko': 'output'}, inplace=True)
-    df = remove_quotes(df=df)
+    df = remove_quotes(df)
     
     if not load_train:
         validation_output_path = os.path.join(VALIDATION_DIR, 'validation_data.csv')
-        df.to_csv(validation_output_path)
+        df.to_csv(validation_output_path, index=False)
         logging.warning("AIHub test data preprocess done")
         return None
     
@@ -77,7 +77,7 @@ def preprocess_HuggingFace_data(huggingface_path: str) -> pd.DataFrame:
     df = pd.read_parquet(huggingface_path)
     df = df.loc[:, ['kor', 'eng']]
     df.rename(columns={'eng': 'input', 'kor':'output'}, inplace=True)
-    df = remove_quotes(df=df)
+    df = remove_quotes(df)
     logging.warning(f"HuggingFace data preprocess done")
     
     return df
@@ -94,7 +94,7 @@ def concat_data(df1: pd.DataFrame, df2: pd.DataFrame, csv_file_name: str) -> pd.
     csv_file_dir = os.path.join(TRAINING_DIR, csv_file_name)
     
     df = pd.concat([df1, df2], ignore_index=True)
-    df.to_csv(csv_file_dir)
+    df.to_csv(csv_file_dir, index=False)
     logging.warning(f"Concatenated dataframe has been saved in {csv_file_dir}")
     
     return df
@@ -130,58 +130,7 @@ def normalize_text(text: str) -> str:
     
     return text.strip()
 
-def tokenize_and_encode(df: pd.DataFrame, tokenizer: AutoTokenizer, max_length: int = 128) -> pd.DataFrame:
-    """
-    데이터프레임의 'input'과 'output' 컬럼에 대해 토큰화 및 인코딩을 수행합니다.
-    인코딩 결과를 새로운 컬럼에 저장합니다.
-    
-    :parameter df: 토큰화 및 임코딩을 수행할 원본 데이터프레임
-    :parameter tokenizer: HuggingFace의 AutoTokenizer 객체
-    :parameter max_length: 토큰 시퀀스의 최대 길이
-    :return: 'input_ids', 'output_ids' 컬럼이 추가된, 토큰화 및 인코딩이 완료된 데이터프레임
-    """
-    def encode_text(text):
-        encoding = tokenizer(
-            text,
-            add_special_tokens=True,
-            max_length=max_length,
-            truncation=True,
-            padding='max_length',
-        )
-        
-        return encoding['input_ids']
-    
-    df['input_ids'] = df['input'].apply(encode_text)
-    df['output_ids'] = df['output'].apply(encode_text)
-    
-    return df
-
-def calculate_dynamic_max_length(df: pd.DataFrame, tokenizer: AutoTokenizer) -> int:
-    """
-    데이터프레임의 토큰 길이를 계산하고, 각 컬럼의 95백분위수를 기반으로 max_length를 결정합니다.
-    
-    :parameter df: 토큰 길이를 계산할 원본 데이터프레임
-    :parameter tokenizer: HuggingFace의 AutoTokenizer객체
-    :return: 두 컬럼의 95 백분위수 토큰 길이 중 큰 값을 max_length로 반환
-    """
-    # 각 텍스트에 대해 토큰 길이 계산
-    df['input_token_len'] = df['input'].apply(lambda x: len(tokenizer.encode(x, add_special_tokens=True)))
-    df['output_token_len'] = df['output'].apply(lambda x: len(tokenizer.encode(x, add_special_tokens=True)))
-    
-    # 각 컬럼의 95 백분위수 계산
-    # max_input_length = int(df['input_token_len'].quantile(0.95))
-    max_input_length = int(df['input_token_len'].quantile(1))
-    # max_output_length = int(df['output_token_len'].quantile(0.95))
-    max_output_length = int(df['output_token_len'].quantile(1))
-    dynamic_max_length = max(max_input_length, max_output_length)
-    
-    logging.warning(f"Dynamic max_length set to: {dynamic_max_length}")
-    
-    # 임시 토큰 길이 컬럼 삭제
-    df.drop(columns=['input_token_len', 'output_token_len'], inplace=True)
-    return dynamic_max_length
-
-def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str, tokenizer_name: str = "MLP-KTLim/llama-3-Korean-Bllossom-8B") -> None:
+def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str) -> None:
     """
     전체 전처리 파이프라인:
         1. train_data.csv 로드 후 텍스트 정규화, 토큰화 및 인코딩 수행 후, 이를 학습 및 검증 데이터셋으로 분할합니다.
@@ -196,10 +145,6 @@ def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str,
     train_df = pd.read_csv(os.path.join(TRAINING_DIR, train_csv_file_name))
     for col in ['input', 'output']:
         train_df[col] = train_df[col].astype(str).apply(normalize_text)
-        
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-    dynamic_max_length = calculate_dynamic_max_length(train_df, tokenizer)
-    train_df = tokenize_and_encode(train_df, tokenizer, max_length=dynamic_max_length)
     
     # 학습 데이터셋과 검증 데이터셋으로 분할
     train_split_df, val_split_df = train_test_split(train_df, test_size=0.1, random_state=1)
@@ -208,7 +153,6 @@ def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str,
     test_df = pd.read_csv(os.path.join(VALIDATION_DIR, validation_csv_file_name))
     for col in ['input', 'output']:
         test_df[col] = test_df[col].astype(str).apply(normalize_text)
-    test_df = tokenize_and_encode(test_df, tokenizer, max_length=dynamic_max_length)
     
     # 전처리된 데이터 저장
     output_dir = os.path.join(os.path.dirname(DATA_DIR), "processed_data")
