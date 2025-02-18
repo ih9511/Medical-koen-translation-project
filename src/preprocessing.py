@@ -13,9 +13,7 @@ import re
 import logging
 import pandas as pd
 
-from typing import List
 from dotenv import load_dotenv
-from transformers import AutoTokenizer
 from sklearn.model_selection import train_test_split
 
 
@@ -139,15 +137,11 @@ def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str)
         
     :parameter train_csv_file_name: 학습 데이터 csv 파일 이름
     :parameter validation_csv_file_name: 검증 데이터 csv 파일 이름
-    :parameter tokenizer_name: 토크나이저 이름
     """
     # train_data.csv 처리 (학습 및 검증 데이터셋 생성)
     train_df = pd.read_csv(os.path.join(TRAINING_DIR, train_csv_file_name))
     for col in ['input', 'output']:
         train_df[col] = train_df[col].astype(str).apply(normalize_text)
-    
-    # 학습 데이터셋과 검증 데이터셋으로 분할
-    train_split_df, val_split_df = train_test_split(train_df, test_size=0.1, random_state=1)
     
     # validation_data.csv 처리 (테스트 데이터셋)
     test_df = pd.read_csv(os.path.join(VALIDATION_DIR, validation_csv_file_name))
@@ -157,9 +151,8 @@ def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str)
     # 전처리된 데이터 저장
     output_dir = os.path.join(os.path.dirname(DATA_DIR), "processed_data")
     os.makedirs(output_dir, exist_ok=True)
-    train_split_df.to_csv(os.path.join(output_dir, "train_processed.csv"), index=False)
-    val_split_df.to_csv(os.path.join(output_dir, "val_processed.csv"), index=False)
-    test_df.to_csv(os.path.join(output_dir, "test_processed.csv"), index=False)
+    train_df.to_csv(os.path.join(output_dir, "train_processed.csv"), index=False)
+    test_df.to_csv(os.path.join(output_dir, "val_processed.csv"), index=False)
     logging.warning("Preprocessing pipeline completed and files saved.")
 
 if __name__ == "__main__":
