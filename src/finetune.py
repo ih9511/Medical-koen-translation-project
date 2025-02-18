@@ -1,108 +1,176 @@
 """
 finetune.py
 
-이 모듈은 QLoRA 기법을 활용하여 영어 - 한국어 의료 번역 모델을 파인튜닝하는 기능을 수행합니다.
+이 모듈은 LoRA 기법을 활용하여 영어 - 한국어 의료 번역 모델을 파인튜닝하는 기능을 수행합니다.
 주요 기능:
-- 사전학습 모델 로드 및 QLoRA 적용
+- 사전학습 모델 로드 및 LoRA 적용
 - 학습 및 검증 데이터셋 로딩
 - 학습 루프 구현 및 체크포인트 저장
 - TrainingArgumets 및 Trainer를 통한 학습 환경 구성
 """
 import logging
 import torch
+import os
+import pandas as pd
 
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, Trainer, TrainingArguments # 번역 task를 위한 Seq2SeqLM
-from peft import get_peft_model, LoraConfig # QLoRA를 위한 PEFT 라이브러리
-from utils import load_dataset # 전처리된 CSV 데이터를 로드
+from datasets import load_dataset, Dataset
+from dotenv import load_dotenv
+from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments, DataCollatorForSeq2Seq
+from peft import get_peft_model, LoraConfig # LoRA를 위한 PEFT 라이브러리
+from trl import SFTTrainer
 
 
-def load_model(model_name: str, qlora_config: dict) -> torch.nn.Module:
+load_dotenv()
+DATA_DIR = os.getenv("DATA_DIR")
+model_id = 'google/gemma-2-2b'
+
+
+def format_translation_prompt(train_csv_path: str, validation_csv_path: str) -> Dataset:
     """
-    사전학습 모델을 로드하고 QLoRA를 적용합니다.
+    영-한 번역 LLM 파인튜닝용 프롬프트 데이터셋으로 변환합니다.
     
-    :parameter model_name: 사전학습 모델의 이름 또는 경로
-    :parameter qlora_config: QLoRA 설정을 담은 딕셔너리
-    :return: QLoRA가 적용된 모델 객체
+    :parameter train_csv_path: 학습 데이터 CSV 파일 경로
+    :parameter validation_csv_path: 검증 데이터 CSV 파일 경로
+    :return: 변환된 Dataset 객체 (train, validation)
     """
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_name, device_map='cuda')
-    # QLoRA 설정 적용
-    lora_config = LoraConfig(
-        r=qlora_config.get("r", 8),
-        lora_alpha=qlora_config.get("lora_alpha", 32),
-        lora_dropout=qlora_config.get("lora_dropout", 0.1),
-        target_modules=qlora_config.get("target_modules", ["q_proj", "v_proj"])
+    dataset = load_dataset('csv', data_files={
+        'train': os.path.join(DATA_DIR, train_csv_path),
+        'validation': os.path.join(DATA_DIR, validation_csv_path)
+    })
+    
+    # 'prompt' 필드 생성
+    def create_prompt(example):
+        prompt = (f"<med_translation>\n"
+                  f"<en_to_ko>\n"
+                  f"<source_text> {example['input']} </source_text>\n"
+                  f"<target_text> {example['output']} </target_text>\n"
+                  f"<end_translation>")
+        return {'prompt': prompt}
+    
+    dataset = dataset.map(create_prompt)
+    
+    return dataset['train'], dataset['validation']
+    
+    
+def tokenizer_after_check_padding_token(model_id: str) -> AutoTokenizer:
+    """
+    모델의 pad_token 존재 여부를 확인합니다.
+    
+    :parameter model_id: HuggingFace 모델 이름
+    :return: tokenizer
+    """
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_id, 
+        attn_implementation='eager', # only for gemma2-2b
     )
-    model = get_peft_model(model, lora_config)
-    logging.warning("Model loaded and QLoRA applied")
     
-    return model
-
-def train_model(model: torch.nn.Module, tokenizer: AutoTokenizer, train_dataset, val_dataset, output_dir: str, training_args: TrainingArguments) -> None:
-    """
-    QLoRA가 적용된 모델을 학습 및 검증 데이터셋을 사용해 파인튜닝하고, 결과를 저장합니다.
+    if tokenizer.pad_token is None:
+        logging.warning(f'{model_id} has no pad_token. Set pad_token as eos_token.')
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.padding_side = 'right'
+        
+        return tokenizer
     
-    :parameter model: QLoRA가 적용된 모델
-    :parameter tokenizer: 모델과 함께 사용할 토크나이저
-    :parameter train_dataset: 학습에 사용할 데이터셋
-    :parameter val_dataset: 검증에 사용할 데이터셋
-    :parameter output_dir: 학습 결과 체크포인트를 저장할 디렉토리
-    :parameter training_args: 학습 설정을 담은 TrainingArguments 객체
-    :return: None (모델 체크포인트가 output_dir에 저장됨)
-    """
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=val_dataset,
-        tokenizer=tokenizer,
-    )
-    trainer.train()
-    trainer.save_model(output_dir)
-    logging.warning(f"Training completed and model saved to {output_dir}")
+    else:
+        logging.warning(f'{model_id} has pad_token. {tokenizer.pad_token}')
+        tokenizer.padding_side = 'right'
+        
+        return tokenizer
+    
     
 def train_pipeline() -> None:
     """
-    QLoRA를 활용한 모델 파인튜닝의 전체 파이프라인을 실행합니다.
+    LoRA를 활용한 모델 파인튜닝의 전체 파이프라인을 실행합니다.
     
     1. 전처리된 학습 데이터셋 및 검증 데이터셋을 로드합니다.
-    2. 사전학습 모델과 토크나이저를 로드하고, QLoRA를 적용합니다.
+    2. 사전학습 모델과 토크나이저를 로드하고, LoRA를 적용합니다.
     3. TrainingArguments를 설정합니다.
     4. 학습 루프를 실행하고, 최종 모델을 저장합니다.
     """
     
-    # 전처리된 데이터셋 로드
-    train_dataset = load_dataset("processed_data/train_processed.csv")
-    val_dataset = load_dataset("processed_data/val_processed.csv")
-    
     # 모델 및 토크나이저 로드
-    model_name = "MLP-KTLim/llama-3-Korean-Bllossom-8B"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    # model_id = "MLP-KTLim/llama-3-Korean-Bllossom-8B"
+    tokenizer = tokenizer_after_check_padding_token(model_id=model_id)
+    logging.warning('Tokenizer setting complete')
     
-    # QLoRA 설정
-    qlora_config = {
-        'r': 8, # update matrics의 rank. 작을수록 trainable param이 적어짐. original weight matrix를 얼마나 줄일 것인지에 대한 계수이므로 작을수록 많이 압축함.
-        'lora_alpha': 32, # LoRA scaling factor. scaling 값이 lora_alpha/r로 들어감 
-        'lora_dropout': 0.1,
-        'target_modules': ['q_proj', 'v_proj'], # lora로 바꿀 모듈
-    }
-    model = load_model(model_name, qlora_config)
+    # 전처리된 데이터셋 로드
+    # dataset = load_dataset('csv', data_files={
+    #     'train': os.path.join(DATA_DIR, "processed_data/train_processed.csv"),
+    #     'validation': os.path.join(DATA_DIR, "processed_data/val_processed.csv")
+    # })
+    
+    train_dataset, validation_dataset = format_translation_prompt('processed_data/train_processed.csv', 'processed_data/val_processed.csv')
+    print(train_dataset[1])
+    print(validation_dataset[1])
+    logging.warning('Successfully load datasets!')
+    
+    def format_dataset(batch):
+        tokens = tokenizer.batch_encode_plus(
+            batch['prompt'],
+            truncation=True,
+            padding='max_length',
+            max_length=128,
+            return_tensors='pt',
+        )
+        # example['input_ids'] = tokens
+        # return example
+        
+        return {'input_ids': tokens['input_ids'], 'attention_mask': tokens['attention_mask']}
+    
+    mapped_train_dataset = train_dataset.map(format_dataset, batched=True, remove_columns=['input', 'output'])
+    mapped_validation_dataset = validation_dataset.map(format_dataset, batched=True, remove_columns=['input', 'output'])
+    logging.warning('Mapping complete!')
+    
+    # 모델 로드
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        device_map='cuda'
+    )
+    
+    # LoRA 설정 적용
+    lora_config = LoraConfig(
+        r=8,
+        lora_alpha=32,
+        lora_dropout= 0.1,
+        target_modules=["q_proj", "v_proj", "k_proj"],
+    )
+    
+    logging.warning("Model loaded and LoRA applied")
+    
+    model = get_peft_model(model, lora_config)
     
     # TrainingArguments 설정
     training_args = TrainingArguments(
-        output_dir='../models',
-        num_train_epochs=3,
+        output_dir='../models/gemma2-2b_finetuned',
+        num_train_epochs=1,
         per_device_train_batch_size=8,
         per_device_eval_batch_size=8,
-        evaluation_strategy='epoch',
+        optim='paged_adamw_32bit', # 로컬 학습 시 페이징 (GPU -> CPU) 기법 활용을 위해 설정
+        learning_rate=2e-5, # LoRA 권장 값 (1e-5 ~ 2e-4)
+        eval_strategy='epoch',
         save_strategy='epoch',
-        logging_dir='../logs',
+        logging_dir='../logs/gemma2-2b_finetuned',
         logging_steps=50,
         bf16=True,
         report_to='tensorboard',
     )
     
+    trainer = SFTTrainer(
+        model=model,
+        args=training_args,
+        train_dataset=mapped_train_dataset,
+        eval_dataset=mapped_validation_dataset,
+        processing_class=tokenizer,
+        peft_config=lora_config,
+    )
+    
     # 학습 실행
-    train_model(model, tokenizer, train_dataset, val_dataset, output_dir='../models', training_args=training_args)
+    logging.warning('Training start')
+    trainer.train()
+    trainer.save_model('../models/gemma2-2b_finetuned')
+    logging.warning('Training completed and model saved')
+    
+    
     
 if __name__ == '__main__':
     train_pipeline()
