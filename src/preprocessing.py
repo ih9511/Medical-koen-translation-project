@@ -65,10 +65,10 @@ def preprocess_AIHub_data(csv_file_name: str, load_train: bool=True, is_local: b
         if not load_train:
             validation_output_path = os.path.join(VALIDATION_DIR, 'validation_data.csv')
             df.to_csv(validation_output_path, index=False)
-            logging.warning("AIHub test data preprocess done")
+            logging.warning("AIHub test data (local storage) preprocess done")
             return None
         
-        logging.warning("AIHub train data preprocess done")
+        logging.warning("AIHub train data (local storage) preprocess done")
         
         return df
     
@@ -80,10 +80,16 @@ def preprocess_AIHub_data(csv_file_name: str, load_train: bool=True, is_local: b
         train_df = preprocess_data(train_df)
         validation_df = preprocess_data(validation_df)
         
+        os.makedirs(TRAINING_DIR, exist_ok=True)
+        os.makedirs(VALIDATION_DIR, exist_ok=True)
+        
+        train_df.to_csv(os.path.join(TRAINING_DIR, 'train_data.csv'))
+        validation_df.to_csv(os.path.join(VALIDATION_DIR, 'validation_data.csv'))
+        
+        logging.warning("AIHub train data (huggingface repo) preprocess done")
+        logging.warning("AIHub train data (huggingface repo) preprocess done")
+        
         return train_df, validation_df
-        
-        
-            
         
 
 def preprocess_HuggingFace_open_data(huggingface_path: str) -> pd.DataFrame:
@@ -114,6 +120,7 @@ def concat_data(df1: pd.DataFrame, df2: pd.DataFrame, csv_file_name: str) -> pd.
     csv_file_dir = os.path.join(TRAINING_DIR, csv_file_name)
     
     df = pd.concat([df1, df2], ignore_index=True)
+    os.makedirs(TRAINING_DIR, exist_ok=True)
     df.to_csv(csv_file_dir, index=False)
     logging.warning(f"Concatenated dataframe has been saved in {csv_file_dir}")
     
@@ -160,12 +167,12 @@ def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str)
     :parameter train_csv_file_name: 학습 데이터 csv 파일 이름
     :parameter validation_csv_file_name: 검증 데이터 csv 파일 이름
     """
-    # train_data.csv 처리 (학습 및 검증 데이터셋 생성)
+    # train_data.csv 처리 (학습 데이터셋 생성)
     train_df = pd.read_csv(os.path.join(TRAINING_DIR, train_csv_file_name))
     for col in ['input', 'output']:
         train_df[col] = train_df[col].astype(str).apply(normalize_text)
     
-    # validation_data.csv 처리 (테스트 데이터셋)
+    # validation_data.csv 처리 (검증 데이터셋)
     test_df = pd.read_csv(os.path.join(VALIDATION_DIR, validation_csv_file_name))
     for col in ['input', 'output']:
         test_df[col] = test_df[col].astype(str).apply(normalize_text)
