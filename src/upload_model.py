@@ -12,14 +12,16 @@ import logging
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from huggingface_hub import HfApi, HfFolder
 from dotenv import load_dotenv
+from peft import PeftModel
 
 load_dotenv(override=True)
 HUGGINGFACE_TOKEN = os.getenv('HUGGINGFACE_TOKEN_RUNPOD')
 
-def upload_model_to_huggingface(model_path: str, repo_id: str, hf_token: str) -> None:
+def merge_and_upload_model_to_huggingface(base_model_name: str, adapter_model_path: str, repo_id: str, hf_token: str) -> None:
     """
     로컬에 저장된 모델을 Hugging Face Model Hub에 업로드합니다.
     
+    :parameter base_model_name: 원본 사전학습 모델
     :parameter model_path: 로컬에 저장된 모델 디렉토리 경로
     :parameter repo_id: Hugging face model repository ID
     :parameter hf_token: Hugging face API Access Token
@@ -28,19 +30,28 @@ def upload_model_to_huggingface(model_path: str, repo_id: str, hf_token: str) ->
     # Hugging face 로그임
     HfFolder.save_token(hf_token)
     
-    # 모델, 토크나이저 불러오기
-    model = AutoModelForCausalLM.from_pretrained(model_path)
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    # 원본 모델, 토크나이저 불러오기
+    base_model = AutoModelForCausalLM.from_pretrained(base_model_name)
+    tokenizer = AutoTokenizer.from_pretrained(base_model_name)
     
-    # 모델 업로드
+    # LoRA 어댑터 로드 및 병합
+    model = PeftModel.from_pretrained(base_model, adapter_model_path)
+    model = model.merge_and_unload()
+    
+    # 병합된 모델 저장
+    model.save_pretrained(adapter_model_path, safe_serialization=False)
+    tokenizer.save_pretrained(adapter_model_path)
+    
+    # 병합된 모델 업로드
     model.push_to_hub(repo_id)
     tokenizer.push_to_hub(repo_id)
     
     logging.warning('Model upload complete!')
     
 if __name__ == '__main__':
+    base_model = 'google/gemma-2-2b'
     model_path = '../models/gemma2-2b_finetuned'
     repo_id = 'ih9511/gemma2-2b_medical_translation_en_ko'
     hf_access_token = HUGGINGFACE_TOKEN
     
-    upload_model_to_huggingface(model_path, repo_id, hf_access_token)
+    merge_and_upload_model_to_huggingface(base_model, model_path, repo_id, hf_access_token)

@@ -173,4 +173,5 @@ cython_debug/
 # custom ignore
 data/
 *.ipynb
-logs/
+# logs/
+models/
