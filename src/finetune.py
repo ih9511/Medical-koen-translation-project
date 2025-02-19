@@ -61,7 +61,6 @@ def tokenizer_after_check_padding_token(model_id: str) -> AutoTokenizer:
     """
     tokenizer = AutoTokenizer.from_pretrained(
         model_id, 
-        attn_implementation='eager', # only for gemma2-2b
     )
     
     if tokenizer.pad_token is None:
@@ -124,7 +123,8 @@ def train_pipeline() -> None:
     # 모델 로드
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
-        device_map='cuda'
+        device_map='cuda',
+        attn_implementation='eager', # only for gemma2-2b
     )
     
     # LoRA 설정 적용
