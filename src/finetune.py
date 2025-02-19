@@ -20,7 +20,7 @@ from peft import get_peft_model, LoraConfig # LoRA를 위한 PEFT 라이브러�
 from trl import SFTTrainer
 
 
-load_dotenv()
+load_dotenv(override=True)
 DATA_DIR = os.getenv("DATA_DIR")
 model_id = 'google/gemma-2-2b'
 

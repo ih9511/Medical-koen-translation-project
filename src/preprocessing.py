@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 
 
-load_dotenv()
+load_dotenv(override=True)
 TRAINING_DIR = os.getenv("TRAINING_DIR")
 VALIDATION_DIR = os.getenv("VALIDATION_DIR")
 DATA_DIR = os.getenv("DATA_DIR")
@@ -178,7 +178,7 @@ def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str)
         test_df[col] = test_df[col].astype(str).apply(normalize_text)
     
     # 전처리된 데이터 저장
-    output_dir = os.path.join(os.path.dirname(DATA_DIR), "processed_data")
+    output_dir = os.path.join(DATA_DIR, "processed_data")
     os.makedirs(output_dir, exist_ok=True)
     train_df.to_csv(os.path.join(output_dir, "train_processed.csv"), index=False)
     test_df.to_csv(os.path.join(output_dir, "val_processed.csv"), index=False)
