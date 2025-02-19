@@ -13,8 +13,9 @@ import re
 import logging
 import pandas as pd
 
+from datasets import load_dataset
 from dotenv import load_dotenv
-from sklearn.model_selection import train_test_split
+
 
 
 load_dotenv()
@@ -34,37 +35,58 @@ def remove_quotes(df: pd.DataFrame) -> pd.DataFrame:
     
     return df
 
-def preprocess_AIHub_data(csv_file_name: str, load_train=True) -> pd.DataFrame:
+def preprocess_AIHub_data(csv_file_name: str, load_train: bool=True, is_local: bool=True) -> pd.DataFrame:
     """
     AIHub 데이터를 로드하고 전처리합니다.
     ['ko', 'en']을 추출 후, {'en': 'input', 'ko': 'output'}으로 컬럼명을 수정합니다.
     
     :parameter csv_file_name: AIHub 원천 데이터 이름
     :parameter load_train: 어떤 데이터를 로드할 것인지 선택. True면 train data를, False면 validation data를 로드
+    :parameter is_local: 데이터 소스 위치 선택. True면 로컬 데이터를, False면 HuggingFace 데이터를 로드
     :return: 전처리된 데이터프레임
     """
-    if load_train:
-        csv_file_dir = os.path.join(TRAINING_DIR, csv_file_name)
-    else:
-        csv_file_dir = os.path.join(VALIDATION_DIR, csv_file_name)
+    def preprocess_data(df: pd.DataFrame):
+        df = df[df['domain'].str.contains('의학')]
+        df = df.loc[:, ['en', 'ko']]
+        df.rename(columns={'en': 'input', 'ko': 'output'}, inplace=True)
+        df = remove_quotes(df)
         
-    df = pd.read_csv(csv_file_dir)
-    df = df[df['domain'].str.contains('의학')]
-    df = df.loc[:, ['en', 'ko']]
-    df.rename(columns={'en': 'input', 'ko': 'output'}, inplace=True)
-    df = remove_quotes(df)
+        return df
+        
+    if is_local:
+        if load_train:
+            csv_file_dir = os.path.join(TRAINING_DIR, csv_file_name)
+        else:
+            csv_file_dir = os.path.join(VALIDATION_DIR, csv_file_name)
+            
+        df = pd.read_csv(csv_file_dir)
+        df = preprocess_data(df)
+        
+        if not load_train:
+            validation_output_path = os.path.join(VALIDATION_DIR, 'validation_data.csv')
+            df.to_csv(validation_output_path, index=False)
+            logging.warning("AIHub test data preprocess done")
+            return None
+        
+        logging.warning("AIHub train data preprocess done")
+        
+        return df
     
-    if not load_train:
-        validation_output_path = os.path.join(VALIDATION_DIR, 'validation_data.csv')
-        df.to_csv(validation_output_path, index=False)
-        logging.warning("AIHub test data preprocess done")
-        return None
-    
-    logging.warning("AIHub train data preprocess done")
-    
-    return df
+    else:
+        df = load_dataset('ih9511/medical-translation-en-ko')
+        train_df = df['train'].to_pandas()
+        validation_df = df['validation'].to_pandas()
+        
+        train_df = preprocess_data(train_df)
+        validation_df = preprocess_data(validation_df)
+        
+        return train_df, validation_df
+        
+        
+            
+        
 
-def preprocess_HuggingFace_data(huggingface_path: str) -> pd.DataFrame:
+def preprocess_HuggingFace_open_data(huggingface_path: str) -> pd.DataFrame:
     """
     HuggingFace 데이터를 로드하고 전처리합니다.
     ['kor', 'eng']을 추출 후, {'eng': 'input', 'kor': 'output'}으로 컬럼명을 수정합니다.
@@ -156,8 +178,9 @@ def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str)
     logging.warning("Preprocessing pipeline completed and files saved.")
 
 if __name__ == "__main__":
-    aihub_train_data = preprocess_AIHub_data(csv_file_name='1113_tech_train_set_1195228.csv', load_train=True)
-    aihub_validation_data = preprocess_AIHub_data(csv_file_name='1113_tech_valid_set_149403.csv', load_train=False)
-    huggingface_train_data = preprocess_HuggingFace_data(huggingface_path='hf://datasets/ChuGyouk/chest_radiology_enko/data/train-00000-of-00001.parquet')
+    # aihub_train_data = preprocess_AIHub_data(csv_file_name='1113_tech_train_set_1195228.csv', load_train=True)
+    # aihub_validation_data = preprocess_AIHub_data(csv_file_name='1113_tech_valid_set_149403.csv', load_train=False)
+    aihub_train_data, aihub_validation_data = preprocess_AIHub_data(csv_file_name=None, load_train=None, is_local=False)
+    huggingface_train_data = preprocess_HuggingFace_open_data(huggingface_path='hf://datasets/ChuGyouk/chest_radiology_enko/data/train-00000-of-00001.parquet')
     concatenated_data = concat_data(aihub_train_data, huggingface_train_data, csv_file_name='train_data.csv')
     preprocess_pipeline(train_csv_file_name="train_data.csv", validation_csv_file_name="validation_data.csv")
