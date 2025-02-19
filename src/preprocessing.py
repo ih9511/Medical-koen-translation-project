@@ -83,8 +83,8 @@ def preprocess_AIHub_data(csv_file_name: str, load_train: bool=True, is_local: b
         os.makedirs(TRAINING_DIR, exist_ok=True)
         os.makedirs(VALIDATION_DIR, exist_ok=True)
         
-        train_df.to_csv(os.path.join(TRAINING_DIR, 'train_data.csv'))
-        validation_df.to_csv(os.path.join(VALIDATION_DIR, 'validation_data.csv'))
+        train_df.to_csv(os.path.join(TRAINING_DIR, 'train_data.csv'), index=False)
+        validation_df.to_csv(os.path.join(VALIDATION_DIR, 'validation_data.csv'), index=False)
         
         logging.warning("AIHub train data (huggingface repo) preprocess done")
         logging.warning("AIHub train data (huggingface repo) preprocess done")
@@ -173,15 +173,15 @@ def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str)
         train_df[col] = train_df[col].astype(str).apply(normalize_text)
     
     # validation_data.csv 처리 (검증 데이터셋)
-    test_df = pd.read_csv(os.path.join(VALIDATION_DIR, validation_csv_file_name))
+    val_df = pd.read_csv(os.path.join(VALIDATION_DIR, validation_csv_file_name))
     for col in ['input', 'output']:
-        test_df[col] = test_df[col].astype(str).apply(normalize_text)
+        val_df[col] = val_df[col].astype(str).apply(normalize_text)
     
     # 전처리된 데이터 저장
     output_dir = os.path.join(DATA_DIR, "processed_data")
     os.makedirs(output_dir, exist_ok=True)
     train_df.to_csv(os.path.join(output_dir, "train_processed.csv"), index=False)
-    test_df.to_csv(os.path.join(output_dir, "val_processed.csv"), index=False)
+    val_df.to_csv(os.path.join(output_dir, "val_processed.csv"), index=False)
     logging.warning("Preprocessing pipeline completed and files saved.")
 
 if __name__ == "__main__":

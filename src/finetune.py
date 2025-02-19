@@ -34,8 +34,8 @@ def format_translation_prompt(train_csv_path: str, validation_csv_path: str) -> 
     :return: 변환된 Dataset 객체 (train, validation)
     """
     dataset = load_dataset('csv', data_files={
-        'train': os.path.join(DATA_DIR, train_csv_path),
-        'validation': os.path.join(DATA_DIR, validation_csv_path)
+        'train': train_csv_path,
+        'validation': validation_csv_path,
     })
     
     # 'prompt' 필드 생성
@@ -98,7 +98,7 @@ def train_pipeline() -> None:
     #     'validation': os.path.join(DATA_DIR, "processed_data/val_processed.csv")
     # })
     
-    train_dataset, validation_dataset = format_translation_prompt('processed_data/train_processed.csv', 'processed_data/val_processed.csv')
+    train_dataset, validation_dataset = format_translation_prompt('./data/processed_data/train_processed.csv', './data/processed_data/val_processed.csv')
     print(train_dataset[1])
     print(validation_dataset[1])
     logging.warning('Successfully load datasets!')
