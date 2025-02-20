@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 TRAINING_DIR = os.getenv("TRAINING_DIR")
 VALIDATION_DIR = os.getenv("VALIDATION_DIR")
+TEST_DIR = os.getenv("TEST_DIR")
 DATA_DIR = os.getenv("DATA_DIR")
 
 def remove_quotes(df: pd.DataFrame) -> pd.DataFrame:
@@ -104,27 +105,31 @@ def preprocess_HuggingFace_open_data(huggingface_path: str) -> pd.DataFrame:
     df = df.loc[:, ['kor', 'eng']]
     df.rename(columns={'eng': 'input', 'kor':'output'}, inplace=True)
     df = remove_quotes(df)
+    
+    os.makedirs(TEST_DIR, exist_ok=True)
+    
+    df.to_csv(os.path.join(TEST_DIR, 'test_data.csv'), index=False)
     logging.warning(f"HuggingFace data preprocess done")
     
     return df
 
-def concat_data(df1: pd.DataFrame, df2: pd.DataFrame, csv_file_name: str) -> pd.DataFrame:
-    """
-    두 개의 데이터프레임을 합친 후 저장합니다.
+# def concat_data(df1: pd.DataFrame, df2: pd.DataFrame, csv_file_name: str) -> pd.DataFrame:
+#     """
+#     두 개의 데이터프레임을 합친 후 저장합니다.
     
-    :parameter df1: 합치고자 하는 데이터프레임
-    :parameter df2: 합치고자 하는 데이터프레임
-    :parameter csv_file_name: 합쳐진 데이터프레임을 저장할 이름
-    :return: 합쳐진 데이터프레임
-    """
-    csv_file_dir = os.path.join(TRAINING_DIR, csv_file_name)
+#     :parameter df1: 합치고자 하는 데이터프레임
+#     :parameter df2: 합치고자 하는 데이터프레임
+#     :parameter csv_file_name: 합쳐진 데이터프레임을 저장할 이름
+#     :return: 합쳐진 데이터프레임
+#     """
+#     csv_file_dir = os.path.join(TRAINING_DIR, csv_file_name)
     
-    df = pd.concat([df1, df2], ignore_index=True)
-    os.makedirs(TRAINING_DIR, exist_ok=True)
-    df.to_csv(csv_file_dir, index=False)
-    logging.warning(f"Concatenated dataframe has been saved in {csv_file_dir}")
+#     df = pd.concat([df1, df2], ignore_index=True)
+#     os.makedirs(TRAINING_DIR, exist_ok=True)
+#     df.to_csv(csv_file_dir, index=False)
+#     logging.warning(f"Concatenated dataframe has been saved in {csv_file_dir}")
     
-    return df
+#     return df
 
 def validate_and_cleansing_data(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -157,7 +162,7 @@ def normalize_text(text: str) -> str:
     
     return text.strip()
 
-def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str) -> None:
+def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str, test_csv_file_name: str) -> None:
     """
     전체 전처리 파이프라인:
         1. train_data.csv 로드 후 텍스트 정규화, 토큰화 및 인코딩 수행 후, 이를 학습 및 검증 데이터셋으로 분할합니다.
@@ -167,7 +172,7 @@ def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str)
     :parameter train_csv_file_name: 학습 데이터 csv 파일 이름
     :parameter validation_csv_file_name: 검증 데이터 csv 파일 이름
     """
-    # train_data.csv 처리 (학습 데이터셋 생성)
+    # train_data.csv 처리 (학습 데이터셋)
     train_df = pd.read_csv(os.path.join(TRAINING_DIR, train_csv_file_name))
     for col in ['input', 'output']:
         train_df[col] = train_df[col].astype(str).apply(normalize_text)
@@ -176,18 +181,24 @@ def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str)
     val_df = pd.read_csv(os.path.join(VALIDATION_DIR, validation_csv_file_name))
     for col in ['input', 'output']:
         val_df[col] = val_df[col].astype(str).apply(normalize_text)
+        
+    # test_data.csv 처리 (테스트 데이터셋)
+    test_df = pd.read_csv(os.path.join(TEST_DIR, test_csv_file_name))
+    for col in ['input', 'output']:
+        test_df[col] = test_df[col].astype(str).apply(normalize_text)
     
     # 전처리된 데이터 저장
     output_dir = os.path.join(DATA_DIR, "processed_data")
     os.makedirs(output_dir, exist_ok=True)
     train_df.to_csv(os.path.join(output_dir, "train_processed.csv"), index=False)
     val_df.to_csv(os.path.join(output_dir, "val_processed.csv"), index=False)
+    test_df.to_csv(os.path.join(output_dir, "test_processed.csv"), index=False)
     logging.warning("Preprocessing pipeline completed and files saved.")
 
 if __name__ == "__main__":
     # aihub_train_data = preprocess_AIHub_data(csv_file_name='1113_tech_train_set_1195228.csv', load_train=True)
     # aihub_validation_data = preprocess_AIHub_data(csv_file_name='1113_tech_valid_set_149403.csv', load_train=False)
-    aihub_train_data, aihub_validation_data = preprocess_AIHub_data(csv_file_name=None, load_train=None, is_local=False)
-    huggingface_train_data = preprocess_HuggingFace_open_data(huggingface_path='hf://datasets/ChuGyouk/chest_radiology_enko/data/train-00000-of-00001.parquet')
-    concatenated_data = concat_data(aihub_train_data, huggingface_train_data, csv_file_name='train_data.csv')
-    preprocess_pipeline(train_csv_file_name="train_data.csv", validation_csv_file_name="validation_data.csv")
+    aihub_train_data, aihub_validation_data = preprocess_AIHub_data(csv_file_name=None, load_train=True, is_local=False)
+    huggingface_test_data = preprocess_HuggingFace_open_data(huggingface_path='hf://datasets/ChuGyouk/chest_radiology_enko/data/train-00000-of-00001.parquet')
+    # concatenated_data = concat_data(aihub_train_data, huggingface_train_data, csv_file_name='train_data.csv')
+    preprocess_pipeline("train_data.csv", "validation_data.csv", "test_data.csv")
