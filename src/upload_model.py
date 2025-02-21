@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from peft import PeftModel
 
 load_dotenv(override=True)
-HUGGINGFACE_TOKEN = os.getenv('HUGGINGFACE_TOKEN_RUNPOD')
+HUGGINGFACE_TOKEN = os.getenv('HUGGINGFACE_TOKEN')
 
 def merge_and_upload_model_to_huggingface(base_model_name: str, adapter_model_path: str, repo_id: str, hf_token: str) -> None:
     """
