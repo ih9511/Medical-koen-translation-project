@@ -3,14 +3,16 @@
 set -e
 
 echo "🐍 Setting up virtual environment..."
-python -m venv .venv || { echo "❌ Failed to create virtual environment!"; exit 1; }
 
 # 운영체제 감지
 OS_TYPE=$(uname)
 if [[ "$OS_TYPE" == "Linux" || "$OS_TYPE" == "Darwin" ]]; then
+    python3.10 -m venv .venv || { echo "❌ Failed to create virtual environment!"; exit 1; }
     echo "🔹 Detected Linux/MacOS - Using bin/activate"
     source .venv/bin/activate
+    echo "✅ Virtual environment activated!"
 elif [[ "$OS_TYPE" == "MINGW64_NT"* || "$OS_TYPE" == "CYGWIN_NT"* ]]; then
+    python -m venv .venv || { echo "❌ Failed to create virtual environment!"; exit 1; }
     echo "🔹 Detected Windows (Git Bash) - Using Scripts/activate"
     source .venv/Scripts/activate
     echo "✅ Virtual environment activated!"
