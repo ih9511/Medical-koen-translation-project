@@ -2,11 +2,6 @@
 
 set -e
 
-# 초기 세팅
-# echo "Cloning the repository..."
-# git clone https://github.com/ih9511/Medical-koen-translation-project.git
-# cd Medical-koen-translation-project
-
 echo "🐍 Setting up virtual environment..."
 python -m venv .venv || { echo "❌ Failed to create virtual environment!"; exit 1; }
 
@@ -17,7 +12,7 @@ if [[ "$OS_TYPE" == "Linux" || "$OS_TYPE" == "Darwin" ]]; then
     source .venv/bin/activate
 elif [[ "$OS_TYPE" == "MINGW64_NT"* || "$OS_TYPE" == "CYGWIN_NT"* ]]; then
     echo "🔹 Detected Windows (Git Bash) - Using Scripts/activate"
-    . .venv/Scripts/activate
+    source .venv/Scripts/activate
     echo "✅ Virtual environment activated!"
 else
     echo "❌ Unsupported OS detected! Please activate venv manually."
@@ -27,17 +22,11 @@ fi
 echo "🐍 Using Python: $(which python)"
 
 echo "📦 Installing dependencies..."
-pip install --upgrade pip
 pip install -r requirements.txt
 
 echo "🔥 Reinstalling PyTorch with CUDA 11.8 support..."
 pip uninstall -y torch torchvision torchaudio
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-
-# Hugging Face 로그인
-# echo "Logging into Hugging Face..."
-# source .env
-# huggingface-cli login --token $HUGGINGFACE_TOKEN
 
 cd src
 
