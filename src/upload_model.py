@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from peft import PeftModel
 
 load_dotenv(override=True)
-HUGGINGFACE_TOKEN = os.getenv('HUGGINGFACE_TOKEN_RUNPOD')
+HUGGINGFACE_TOKEN = os.getenv('HUGGINGFACE_TOKEN')
 
 def merge_and_upload_model_to_huggingface(base_model_name: str, adapter_model_path: str, repo_id: str, hf_token: str) -> None:
     """
@@ -27,7 +27,7 @@ def merge_and_upload_model_to_huggingface(base_model_name: str, adapter_model_pa
     :parameter hf_token: Hugging face API Access Token
     """
     
-    # Hugging face 로그임
+    # Hugging face 로그인
     HfFolder.save_token(hf_token)
     
     # 원본 모델, 토크나이저 불러오기
