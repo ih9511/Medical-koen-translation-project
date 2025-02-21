@@ -15,6 +15,7 @@ import pandas as pd
 
 from datasets import load_dataset
 from dotenv import load_dotenv
+from huggingface_hub import HfApi, HfFolder
 
 
 
@@ -23,6 +24,8 @@ TRAINING_DIR = os.getenv("TRAINING_DIR")
 VALIDATION_DIR = os.getenv("VALIDATION_DIR")
 TEST_DIR = os.getenv("TEST_DIR")
 DATA_DIR = os.getenv("DATA_DIR")
+HUGGINGFACE_TOKEN = os.getenv('HUGGINGFACE_TOKEN')
+
 
 def remove_quotes(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -196,6 +199,7 @@ def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str,
     logging.warning("Preprocessing pipeline completed and files saved.")
 
 if __name__ == "__main__":
+    HfFolder.save_token(HUGGINGFACE_TOKEN)
     # aihub_train_data = preprocess_AIHub_data(csv_file_name='1113_tech_train_set_1195228.csv', load_train=True)
     # aihub_validation_data = preprocess_AIHub_data(csv_file_name='1113_tech_valid_set_149403.csv', load_train=False)
     aihub_train_data, aihub_validation_data = preprocess_AIHub_data(csv_file_name=None, load_train=True, is_local=False)
