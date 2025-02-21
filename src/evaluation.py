@@ -93,7 +93,7 @@ def evaluate_translation(model, tokenizer, dataset_path: str):
 
 
 if __name__ == '__main__':
-    model_name = 'ih9511/gemma2-2b_medical_translation_en_ko'
+    model_name = 'ih9511/gemma2-2b_medical_translation_en_ko_v2'
     dataset_path = './data/processed_data/test_processed.csv'
     
     model, tokenizer = load_model(model_name)

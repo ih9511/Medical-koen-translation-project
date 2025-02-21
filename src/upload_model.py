@@ -51,7 +51,7 @@ def merge_and_upload_model_to_huggingface(base_model_name: str, adapter_model_pa
 if __name__ == '__main__':
     base_model = 'google/gemma-2-2b'
     model_path = '../models/gemma2-2b_finetuned'
-    repo_id = 'ih9511/gemma2-2b_medical_translation_en_ko'
+    repo_id = 'ih9511/gemma2-2b_medical_translation_en_ko_v2'
     hf_access_token = HUGGINGFACE_TOKEN
     
     merge_and_upload_model_to_huggingface(base_model, model_path, repo_id, hf_access_token)
