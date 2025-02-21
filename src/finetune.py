@@ -36,7 +36,7 @@ def format_translation_prompt(train_csv_path: str, validation_csv_path: str) -> 
     dataset = load_dataset('csv', data_files={
         'train': train_csv_path,
         'validation': validation_csv_path,
-    })
+    }, keep_in_memory=True)
     
     # 'prompt' 필드 생성
     def create_prompt(example):
@@ -114,7 +114,10 @@ def train_pipeline() -> None:
         # example['input_ids'] = tokens
         # return example
         
-        return {'input_ids': tokens['input_ids'], 'attention_mask': tokens['attention_mask']}
+        return {
+            'input_ids': tokens['input_ids'].to(dtype=torch.long), 
+            'attention_mask': tokens['attention_mask'].to(dtype=torch.long),
+        }
     
     mapped_train_dataset = train_dataset.map(format_dataset, batched=True, remove_columns=['input', 'output'])
     mapped_validation_dataset = validation_dataset.map(format_dataset, batched=True, remove_columns=['input', 'output'])
@@ -124,6 +127,7 @@ def train_pipeline() -> None:
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
         device_map='cuda',
+        torch_dtype=torch.bfloat16,
         attn_implementation='eager', # only for gemma2-2b
     )
     
@@ -139,6 +143,11 @@ def train_pipeline() -> None:
     
     model = get_peft_model(model, lora_config)
     
+    # GPU가 bfloat16을 지원하는지 확인
+    bf16_supported = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+    fp16_supported = torch.cuda.is_available() and not bf16_supported
+    logging.warning(f"bf16 support: {bf16_supported}, fp16 support: {fp16_supported}")
+    
     # TrainingArguments 설정
     training_args = TrainingArguments(
         output_dir='../models/gemma2-2b_finetuned',
@@ -151,9 +160,12 @@ def train_pipeline() -> None:
         save_strategy='epoch',
         logging_dir='../logs/gemma2-2b_finetuned',
         logging_steps=50,
-        bf16=True,
+        bf16=bf16_supported,
+        fp16=fp16_supported,
         report_to='tensorboard',
     )
+    
+    
     
     trainer = SFTTrainer(
         model=model,
@@ -167,8 +179,10 @@ def train_pipeline() -> None:
     # 학습 실행
     logging.warning('Training start')
     trainer.train()
+    logging.warning('Training complete!')
     trainer.save_model('../models/gemma2-2b_finetuned')
-    logging.warning('Training completed and model saved')
+    model.half()
+    logging.warning('Fine-tuned model saved!')
     
     
     
