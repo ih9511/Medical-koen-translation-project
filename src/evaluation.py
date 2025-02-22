@@ -5,62 +5,13 @@ evaluation.py
 - BLEU 점수를 계산하여 번역 모델 성능 평가
 - 모델을 로드하고, 테스트 데이터셋을 기반으로 성능 측정
 """
-
-import os
-import torch
 import pandas as pd
 import evaluate
 import logging
+import re
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from datasets import load_dataset
-from typing import Tuple
-
-
-def load_model(model_name: str) -> Tuple[AutoModelForCausalLM, AutoTokenizer]:
-    """
-    Hugging Face Hub에서 사전학습된 번역 모델을 로드합니다.
-    
-    :parameter model_name: 불러올 모델의 HuggingFace 저장소 경로
-    :return: 로드된 모델과 토크나이저
-    """
-    model = AutoModelForCausalLM.from_pretrained(model_name, device_map='cuda')
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    logging.warning('Model and tokenizer load complete!')
-    
-    return model, tokenizer
-
-def translate_text(model, tokenizer, text: str, max_length: int = 128) -> str:
-    """
-    입력 텍스트를 번역하는 함수
-    
-    :parameter model: 로드된 번역 모델
-    :parameter tokenizer: 해당 모델의 토크나이저
-    :parameter text: 번역할 입력 문장
-    :parameter max_length: 번역된 문장의 최대 길이
-    :return: 번역된 텍스트
-    """
-    # 프롬프트
-    prompt = (
-        "Translate the following medical text from English to Korean with precise medical terminology:\n\n"
-        f"English: {text}\n"
-        "Korean:"
-    )
-    
-    inputs = tokenizer(prompt, return_tensors='pt').to(model.device)
-    
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_length=max_length,
-            no_repeat_ngram_size=3,
-            repetition_penalty=1.2,
-            # do_sample=True,
-            # temperature=0.9,
-            # top_p=0.9,
-        )
-    
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+from inference import load_model, translate_text
+        
 
 def evaluate_translation(model, tokenizer, dataset_path: str):
     """
@@ -72,8 +23,9 @@ def evaluate_translation(model, tokenizer, dataset_path: str):
     """
     
     df = pd.read_csv(dataset_path)
+    logging.warning('Inferencing...')
     references = df['output'].tolist()
-    hypotheses = [translate_text(model, tokenizer, text) for text in df['input'].tolist()]
+    hypotheses = [translate_text(model, tokenizer, './data/processed_data/test_processed.csv') for text in df['input'].tolist()]
     logging.warning('Inference complete!')
     
     for i in range(10):
@@ -93,8 +45,10 @@ def evaluate_translation(model, tokenizer, dataset_path: str):
 
 
 if __name__ == '__main__':
-    model_name = 'ih9511/gemma2-2b_medical_translation_en_ko_v2'
+    base_model_name = 'MLP-KTLim/llama-3-Korean-Bllossom-8B'
+    finetune_model_name = 'ih9511/llama-3-Korean-8B_koen_medical_translation'
     dataset_path = './data/processed_data/test_processed.csv'
     
-    model, tokenizer = load_model(model_name)
-    evaluation_results = evaluate_translation(model, tokenizer, dataset_path)
+    model, tokenizer = load_model(base_model_name, finetune_model_name)
+    # evaluation_results = evaluate_translation(model, tokenizer, dataset_path)
+    translate_text(model, tokenizer, dataset_path)

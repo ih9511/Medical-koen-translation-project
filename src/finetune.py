@@ -22,7 +22,7 @@ from trl import SFTTrainer
 
 load_dotenv(override=True)
 DATA_DIR = os.getenv("DATA_DIR")
-model_id = 'google/gemma-2-2b'
+model_id = 'MLP-KTLim/llama-3-Korean-Bllossom-8B'
 
 
 def format_translation_prompt(train_csv_path: str, validation_csv_path: str) -> Dataset:
@@ -128,7 +128,7 @@ def train_pipeline() -> None:
         model_id,
         device_map='cuda',
         torch_dtype=torch.bfloat16,
-        attn_implementation='eager', # only for gemma2-2b
+        # attn_implementation='eager', # only for gemma2-2b
     )
     
     # LoRA 설정 적용
@@ -150,7 +150,7 @@ def train_pipeline() -> None:
     
     # TrainingArguments 설정
     training_args = TrainingArguments(
-        output_dir='../models/gemma2-2b_finetuned',
+        output_dir='../models/llama-3-Korean-8B_koen_medical_translation',
         num_train_epochs=1,
         per_device_train_batch_size=8,
         per_device_eval_batch_size=8,
@@ -158,14 +158,12 @@ def train_pipeline() -> None:
         learning_rate=2e-5, # LoRA 권장 값 (1e-5 ~ 2e-4)
         eval_strategy='epoch',
         save_strategy='epoch',
-        logging_dir='../logs/gemma2-2b_finetuned',
+        logging_dir='../logs/llama-3-Korean-8B_koen_medical_translation',
         logging_steps=50,
         bf16=bf16_supported,
         fp16=fp16_supported,
         report_to='tensorboard',
     )
-    
-    
     
     trainer = SFTTrainer(
         model=model,
@@ -180,7 +178,7 @@ def train_pipeline() -> None:
     logging.warning('Training start')
     trainer.train()
     logging.warning('Training complete!')
-    trainer.save_model('../models/gemma2-2b_finetuned')
+    trainer.save_model('../models/llama-3-Korean-8B_koen_medical_translation')
     model.half()
     logging.warning('Fine-tuned model saved!')
     

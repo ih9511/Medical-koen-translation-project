@@ -49,9 +49,9 @@ def merge_and_upload_model_to_huggingface(base_model_name: str, adapter_model_pa
     logging.warning('Model upload complete!')
     
 if __name__ == '__main__':
-    base_model = 'google/gemma-2-2b'
-    model_path = '../models/gemma2-2b_finetuned'
-    repo_id = 'ih9511/gemma2-2b_medical_translation_en_ko_v2'
+    base_model = 'MLP-KTLim/llama-3-Korean-Bllossom-8B'
+    model_path = '../models/llama-3-Korean-8B_koen_medical_translation'
+    repo_id = 'ih9511/llama-3-Korean-8B_koen_medical_translation'
     hf_access_token = HUGGINGFACE_TOKEN
     
     merge_and_upload_model_to_huggingface(base_model, model_path, repo_id, hf_access_token)
