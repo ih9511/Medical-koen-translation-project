@@ -32,7 +32,6 @@ def remove_quotes(df: pd.DataFrame) -> pd.DataFrame:
     지정된 컬럼의 문자열에서 양쪽 끝의 큰따옴표를 제거합니다.
     
     :parameter df: 처리할 데이터프레임
-    :parameter column: 큰따옴표 제거를 적용할 컬럼 이름
     :return: 큰따옴표가 제거된 데이터프레임
     """
     df.replace({'"': ''})
@@ -116,24 +115,6 @@ def preprocess_HuggingFace_open_data(huggingface_path: str) -> pd.DataFrame:
     
     return df
 
-# def concat_data(df1: pd.DataFrame, df2: pd.DataFrame, csv_file_name: str) -> pd.DataFrame:
-#     """
-#     두 개의 데이터프레임을 합친 후 저장합니다.
-    
-#     :parameter df1: 합치고자 하는 데이터프레임
-#     :parameter df2: 합치고자 하는 데이터프레임
-#     :parameter csv_file_name: 합쳐진 데이터프레임을 저장할 이름
-#     :return: 합쳐진 데이터프레임
-#     """
-#     csv_file_dir = os.path.join(TRAINING_DIR, csv_file_name)
-    
-#     df = pd.concat([df1, df2], ignore_index=True)
-#     os.makedirs(TRAINING_DIR, exist_ok=True)
-#     df.to_csv(csv_file_dir, index=False)
-#     logging.warning(f"Concatenated dataframe has been saved in {csv_file_dir}")
-    
-#     return df
-
 def validate_and_cleansing_data(df: pd.DataFrame) -> pd.DataFrame:
     """
     데이터프레임 내 결측치 및 이상치를 검사하고 정제합니다.
@@ -174,6 +155,7 @@ def preprocess_pipeline(train_csv_file_name: str, validation_csv_file_name: str,
         
     :parameter train_csv_file_name: 학습 데이터 csv 파일 이름
     :parameter validation_csv_file_name: 검증 데이터 csv 파일 이름
+    :parameter test_csv_file_name: 테스트 데이터 csv 파일 이름
     """
     # train_data.csv 처리 (학습 데이터셋)
     train_df = pd.read_csv(os.path.join(TRAINING_DIR, train_csv_file_name))

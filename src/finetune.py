@@ -88,16 +88,10 @@ def train_pipeline() -> None:
     """
     
     # 모델 및 토크나이저 로드
-    # model_id = "MLP-KTLim/llama-3-Korean-Bllossom-8B"
     tokenizer = tokenizer_after_check_padding_token(model_id=model_id)
     logging.warning('Tokenizer setting complete')
     
     # 전처리된 데이터셋 로드
-    # dataset = load_dataset('csv', data_files={
-    #     'train': os.path.join(DATA_DIR, "processed_data/train_processed.csv"),
-    #     'validation': os.path.join(DATA_DIR, "processed_data/val_processed.csv")
-    # })
-    
     train_dataset, validation_dataset = format_translation_prompt('./data/processed_data/train_processed.csv', './data/processed_data/val_processed.csv')
     print(train_dataset[1])
     print(validation_dataset[1])
@@ -111,8 +105,6 @@ def train_pipeline() -> None:
             max_length=128,
             return_tensors='pt',
         )
-        # example['input_ids'] = tokens
-        # return example
         
         return {
             'input_ids': tokens['input_ids'].to(dtype=torch.long), 
@@ -128,7 +120,6 @@ def train_pipeline() -> None:
         model_id,
         device_map='cuda',
         torch_dtype=torch.bfloat16,
-        # attn_implementation='eager', # only for gemma2-2b
     )
     
     # LoRA 설정 적용
