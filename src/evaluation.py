@@ -7,10 +7,17 @@ evaluation.py
 """
 import pandas as pd
 import evaluate
-import logging
+
+from typing import Dict
         
 
-def evaluate_model(data_file_name: str):
+def evaluate_model(data_file_name: str) -> Dict:
+    """
+    모델이 번역한 결과를 활용하여 METEOR, BLEU 점수를 계산합니다.
+    
+    :parameter data_file_name: 번역한 결과가 담긴 파일 위치
+    :return: METEOR score, BLEU score
+    """
     meteor = evaluate.load('meteor')
     bleu = evaluate.load('bleu')
     
@@ -23,6 +30,6 @@ def evaluate_model(data_file_name: str):
     return {'meteor': meteor_score, 'bleu': bleu_score}
 
 if __name__ == '__main__':
-    dataset_path = './data/processed_data/llama_translated_original_model.csv'
+    dataset_path = './data/finetuned_result/results.csv'
     score = evaluate_model(dataset_path)
     print(f"METEOR: {score['meteor']}, BLEU: {score['bleu']}")

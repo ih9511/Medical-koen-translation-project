@@ -44,7 +44,7 @@ def translate_text(model_id, tokenizer_id, data_load_dir: str, data_save_dir: st
     
     i = 1
     for _, row in test_df.iterrows():
-        query = row['input']
+        query = row['text']
         prompt = (
             '''
             [[MEDICAL TRANSLATION MODE]] You are a highly accurate AI translator. Translate the following English clinical sentence into Korean with strict adherence to the original meaning and structure:
@@ -99,10 +99,10 @@ def translate_text(model_id, tokenizer_id, data_load_dir: str, data_save_dir: st
     
 
 if __name__ == '__main__':
-    # base_model_name = 'ih9511/llama-3-Korean-8B_koen_medical_translation'
-    base_model_name = 'MLP-KTLim/llama-3-Korean-Bllossom-8B'
-    # finetune_model_name = 'ih9511/llama-3-Korean-8B_koen_medical_translation'
-    finetune_model_name = 'MLP-KTLim/llama-3-Korean-Bllossom-8B'
-    dataset_path = './data/processed_data/test_processed.csv'
+    base_model_name = 'ih9511/llama-3-Korean-8B_koen_medical_translation'
+    finetune_model_name = 'ih9511/llama-3-Korean-8B_koen_medical_translation'
+    # base_model_name = 'MLP-KTLim/llama-3-Korean-Bllossom-8B'
+    # finetune_model_name = 'MLP-KTLim/llama-3-Korean-Bllossom-8B'
+    dataset_path = '../data/mimic_iii_text.csv'
     
-    translate_text(model_id=finetune_model_name, tokenizer_id=base_model_name, data_load_dir=dataset_path, data_save_dir='./data/non_finetuned_result/results.csv')
+    translate_text(model_id=finetune_model_name, tokenizer_id=base_model_name, data_load_dir=dataset_path, data_save_dir='./data/finetuned_result/mimic_iii_text.csv')
