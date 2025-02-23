@@ -39,7 +39,7 @@ def translate_text(model_id, tokenizer_id, data_load_dir: str, data_save_dir: st
 
     model.eval()
     
-    test_df = pd.read_csv(data_load_dir)
+    test_df = pd.read_csv(data_load_dir, encoding='utf-8')
     translated_text_list = []
     
     i = 1
@@ -52,6 +52,7 @@ def translate_text(model_id, tokenizer_id, data_load_dir: str, data_save_dir: st
             - Preserve exact measurement units (keep original numbers, units, and medical notations unchanged).
             - Ensure precise, formal translation without idiomatic adaptions.
             - Mainatain clinical terminology accuracy.
+            - Don't make any fake information about the patient. Only translate the information written in query.
             '''
             f"English: {query}"
         )
@@ -75,7 +76,7 @@ def translate_text(model_id, tokenizer_id, data_load_dir: str, data_save_dir: st
         
         translated = model.generate(
             input_ids,
-            max_new_tokens=128,
+            max_new_tokens=256,
             # num_return_sequences=1,
             no_repeat_ngram_size=3, # 반복되는 토큰 배제
             repetition_penalty=1.2, # 반복되는 토큰 배제
@@ -94,7 +95,7 @@ def translate_text(model_id, tokenizer_id, data_load_dir: str, data_save_dir: st
     
     # 번역 결과 저장
     output_path = data_save_dir
-    test_df.to_csv(output_path, index=False)
+    test_df.to_csv(output_path, index=False, encoding='utf-8')
     logging.warning('Translation result saved')
     
 
