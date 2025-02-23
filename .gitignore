@@ -171,10 +171,12 @@ cython_debug/
 .pypirc
 
 # custom ignore
-data/Test/
-data/Training/
-data/Validation/
-src/data/processed_data/
+data/
+# data/Test/
+# data/Training/
+# data/Validation/
+# src/data/processed_data/
 *.ipynb
+*.csv
 # logs/
 models/
