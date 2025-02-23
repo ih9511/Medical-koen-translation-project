@@ -76,7 +76,7 @@ def translate_text(model_id, tokenizer_id, data_load_dir: str, data_save_dir: st
         
         translated = model.generate(
             input_ids,
-            max_new_tokens=256,
+            max_new_tokens=1024,
             # num_return_sequences=1,
             no_repeat_ngram_size=3, # 반복되는 토큰 배제
             repetition_penalty=1.2, # 반복되는 토큰 배제
