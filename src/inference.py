@@ -47,7 +47,7 @@ def translate_text(model_id, tokenizer_id, data_load_dir: str, data_save_dir: st
         query = row['text']
         prompt = (
             '''
-            [[MEDICAL TRANSLATION MODE]] You are a highly accurate AI translator. Translate the following English clinical sentence into Korean with strict adherence to the original meaning and structure:
+            [[MEDICAL TRANSLATION MODE]] You are a highly accurate professional AI translator. Translate the following English clinical sentence into Korean with strict adherence to the original meaning and structure:
             - Output must be a single, standalone Korean sentence. Do not include any additional information.
             - Preserve exact measurement units (keep original numbers, units, and medical notations unchanged).
             - Ensure precise, formal translation without idiomatic adaptions.

@@ -46,6 +46,16 @@ else
     echo "⏭ Skipping model fine-tuning."
 fi
 
+# 모델 추론 여부 확인
+echo "❓ Do you want to inference? (y/n)"
+read -r inference_choice
+if [ "$inference_choice" == "y" ]; then
+    echo "🚀 Running model inferencing..."
+    python inference.py
+else
+    echo "⏭ Skipping model inferencing."
+fi
+
 # 모델 평가 여부 확인
 echo "❓ Do you want to evaluate the fine-tuned model? (y/n)"
 read -r evaluate_choice
