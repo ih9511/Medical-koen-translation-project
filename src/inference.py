@@ -12,17 +12,17 @@ import logging
 import re
 import torch
 
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-from typing import Tuple
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
-def translate_text(model_id, tokenizer_id, data_dir: str):
+def translate_text(model_id, tokenizer_id, data_load_dir: str, data_save_dir: str):
     """
     입력 텍스트를 번역하는 함수
     
     :parameter model_id: 로드된 번역 모델
     :parameter tokenizer_id: 해당 모델의 토크나이저
-    :parameter data_dir: 번역된 데이터를 저장할 주소
+    :parameter data_load_dir: 번역할 데이터 주소
+    :parameter data_save_dir: 번역된 데이터를 저장할 주소
     """
     
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_id)
@@ -33,13 +33,13 @@ def translate_text(model_id, tokenizer_id, data_dir: str):
     )
     
     # 추론 최적화
-    model.generation_config.cache_implementation = 'static'
-    model.forward = torch.compile(model.forward, mode='reduce-overhead', fullgraph=True)
+    # model.generation_config.cache_implementation = 'static'
+    # model.forward = torch.compile(model.forward, mode='reduce-overhead', fullgraph=True)
     logging.warning('Model and tokenizer load complete!')
 
     model.eval()
     
-    test_df = pd.read_csv(data_dir)
+    test_df = pd.read_csv(data_load_dir)
     translated_text_list = []
     
     i = 1
@@ -93,7 +93,7 @@ def translate_text(model_id, tokenizer_id, data_dir: str):
     test_df['translated'] = translated_text_list
     
     # 번역 결과 저장
-    output_path = './data/processed_data/llama_translated_original_model.csv'
+    output_path = data_save_dir
     test_df.to_csv(output_path, index=False)
     logging.warning('Translation result saved')
     
@@ -105,4 +105,4 @@ if __name__ == '__main__':
     finetune_model_name = 'MLP-KTLim/llama-3-Korean-Bllossom-8B'
     dataset_path = './data/processed_data/test_processed.csv'
     
-    translate_text(model_id=finetune_model_name, tokenizer_id=base_model_name, data_dir=dataset_path)
+    translate_text(model_id=finetune_model_name, tokenizer_id=base_model_name, data_load_dir=dataset_path, data_save_dir='./data/non_finetuned_result/results.csv')

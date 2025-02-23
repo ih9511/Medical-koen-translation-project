@@ -10,42 +10,19 @@ import evaluate
 import logging
         
 
-# def evaluate_translation(dataset_path: str):
-#     """
-#     번역 모델의 성능을 BLEU 점수를 통해 평가하는 함수 (Hugging Face evaluate 사용)
+def evaluate_model(data_file_name: str):
+    meteor = evaluate.load('meteor')
+    bleu = evaluate.load('bleu')
     
-#     :parameter dataset_path: 평가에 사용할 데이터 파일 경로
-#     :return: BLEU 점수
-#     """
-    
-#     df = pd.read_csv(dataset_path)
-#     references = df['output'].tolist()
-#     hypotheses = df['translated'].tolist()
-#     logging.warning('Data loading complete!')
-    
-#     for i in range(10):
-#         print(f'hypothese: {hypotheses[i]}')
-#         print(f'references: {references[i]}')
-#         print('\n')
-    
-#     # BLEU 평가
-#     logging.warning('BLEU evaluation start')
-#     bleu_metric = evaluate.load('bleu')
-#     bleu_score = bleu_metric.compute(predictions=hypotheses, references=[[ref] for ref in references])
-    
-#     logging.warning('Evaluation Complete!')
-#     logging.warning(f"BLEU: {bleu_score}")
-    
-#     return {"BLEU": bleu_score['bleu']}
+    df = pd.read_csv(data_file_name)
+    predictions = df['translated'].tolist()
+    references = df['output'].tolist()
 
-meteor = evaluate.load('meteor')
-df = pd.read_csv('./data/processed_data/llama_translated_original_model.csv')
-predictions = df['translated'].tolist()
-references = df['output'].tolist()
+    meteor_score = meteor.compute(predictions=predictions, references=references)
+    bleu_score = bleu.compute(predictions=predictions, references=references)
+    return {'meteor': meteor_score, 'bleu': bleu_score}
 
-results = meteor.compute(predictions=predictions, references=references)
-print(results)
-
-# if __name__ == '__main__':
-#     dataset_path = './data/processed_data/llama_translated.csv'
-#     evaluate_translation(dataset_path)
+if __name__ == '__main__':
+    dataset_path = './data/processed_data/llama_translated_original_model.csv'
+    score = evaluate_model(dataset_path)
+    print(f"METEOR: {score['meteor']}, BLEU: {score['bleu']}")
